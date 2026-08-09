@@ -3,7 +3,7 @@ By Ruyi Gong and Rivaan Kakkaramadam
 
 ## Overview
 
-ChromGEM (Chromatin Geometry Empowered Model) is a three-layer computational framework that models how the ground-truth organization of chromatin is transformed by fluorescence labeling and single-molecule localization microscopy (SMLM) measurement physics. The framework begins with a heterogeneous distribution of nucleosomes, simulates the accessibility and binding of fluorescent probes, and then simulates the stochastic localization events detected by an SMLM experiment. The resulting data can be compared directly with the underlying nucleosome distribution to quantify how probe geometry and fluorophore photokinetics influence the apparent structure of chromatin.
+The **Chromatin Geometry Empowered Model (ChromGEM)** is a three-layer computational framework that models how the ground-truth organization of chromatin is transformed by fluorescence labeling and single-molecule localization microscopy (SMLM) measurement physics. The framework begins with a heterogeneous distribution of nucleosomes, simulates the accessibility and binding of fluorescent probes, and then simulates the stochastic localization events detected by an SMLM experiment. The resulting data can be compared directly with the underlying nucleosome distribution to quantify how probe geometry and fluorophore photokinetics influence the apparent structure of chromatin.
 
 The three layers are connected sequentially:
 
