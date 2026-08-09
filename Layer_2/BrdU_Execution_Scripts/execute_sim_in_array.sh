@@ -18,6 +18,11 @@ cd $dirname
 
 cp /projects/p31375/SMLM-SREV-main/BrdU_Execution_Scripts/* .
 
+# DEFINE LOCATIONS OF LAMMPS (MPI version) AND MPIRUN PROGRAMS FOR EXECUTION
+
+lammps="/home/rivaankakkaramadam/lammps-03032020/src/lmp_mpi"
+mpirunexec="/opt/openmpi/4.1.4/bin/mpirun"
+
 # safeguard preventing combination of data from multiple simulations in case you need to rerun anything
 
 rm walkers.xyz
@@ -62,11 +67,11 @@ sed -i "s:^open(unit = 9, file =.*:open(unit = 9, file = '${outputwashfile}'):" 
 
 # get version of SREV configs that lack all overlapping nucleosomes
 
-mpirun -np 32 lmp -in getconfig_nooverlaps.in
+$mpirunexec -np 32 $lammps -in getconfig_nooverlaps.in
 
 # get needed values for formula for temp to input that produces target mobile temp
 
-mpirun -np 32 lmp -in overlapfilter.in
+$mpirunexec -np 32 $lammps -in overlapfilter.in
 
 echo "first ellipsoid particle number"
 var=$(sed -n '4,4p' dump.ellipsoid)
@@ -81,7 +86,7 @@ rm dump.ellipsoid
 
 # run first iteration of simulation
 
-mpirun -np 32 lmp -in first_sim.in
+$mpirunexec -np 32 $lammps -in first_sim.in
 
 for i in $(seq 1 10); do
 	# below rm command clears nothing when i==1; kept in anyway since it performs rm when needed for rest of i's in loop range
@@ -93,7 +98,7 @@ for i in $(seq 1 10); do
 	rm dump.ellipsoid*
 	# get needed values for formula for temp to input that produces target mobile temp
 	sed -i "s:^read_dump .*:read_dump ${lammpsdump} 0 x y z add yes box yes:" overlapfilter_continue.in
-	mpirun -np 32 lmp -in overlapfilter_continue.in
+	$mpirunexec -np 32 $lammps -in overlapfilter_continue.in
 	var=$(sed -n '4,4p' dump.immob)
 	var2=$(sed -n '4,4p' dump.ellipsoid)
 	echo "immob particle numbers" # print statements monitoring changes in number of mobile particles
@@ -109,7 +114,7 @@ for i in $(seq 1 10); do
 	rm dump.immob
 	rm dump.ellipsoid
 	# run next iteration of simulation
-	mpirun -np 32 lmp -in continue_sim.in
+	$mpirunexec -np 32 $lammps -in continue_sim.in
 done
 
 gfortran -Ofast FinalWash.f90
