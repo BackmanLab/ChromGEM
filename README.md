@@ -35,6 +35,30 @@ Voxel-based 3D TIFF volumes
 Radial-density plots
 ```
 
+## Layer 1: SR-EV Model Chromatin Generation
+
+The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which , and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions. The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
+
+### What this layer does
+
+Layer 1 generates a spatially explicit, three-dimensional polymer configuration in which each particle represents a nucleosome. This configuration provides the ground-truth chromatin geometry used by both the labeling simulation and the downstream domain analyses.
+
+### Input
+
+- SR-EV model parameters $\alpha$ and $\phi$.
+
+### Output
+
+- A three-dimensional SR-EV nucleosome configuration, normally stored as a LAMMPS-style dump file containing particle identifiers, particle types, coordinates, and associated particle information.
+- These nucleosome coordinates are used as:
+  - the fixed chromatin obstacle and binding target in Layer 2;
+  - the ground-truth nucleosome coordinates in Layer 3; and
+  - the source data for 3D packing-domain identification and analysis.
+
+## Layer 2: Molecular-Dynamics Simulation of the Label Probe
+
+Layer 2 is contained in [`Layer_2/`](Layer_2/) and includes separate execution folders for EdU and BrdU labeling. The simulations use LAMMPS to model 10,000 fluorescent label probes diffusing around a fixed SR-EV nucleosome configuration. EdU and BrdU are modeled separately because the effective probe sizes differ.
+
 ## Repo Contents
 
 * [BrdU_Execution_Scripts](https://github.com/BackmanLab/SMLM-SREV/tree/490e57f64faff08d02154158d3eefdb6bcfec7a4/BrdU_Execution_Scripts): The scripts used to simulate BrdU labeling (Layer 2 of ChromGEM) with an example script provided for running through a cluster.
