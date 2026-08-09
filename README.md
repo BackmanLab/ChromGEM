@@ -37,11 +37,13 @@ Radial-density plots
 
 ## Layer 1: SR-EV Model Chromatin Generation
 
-In the SR-EV algorithm, a Self-Returning Random Walk ([SRRW](https://www.science.org/doi/10.1126/sciadv.aay4055)) is performed to generate a list of nucleosome locations in space followed by a short molecular dynamics simulation to account for excluded volume occupied by each nucleosome. The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which , and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions. The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
+In the SR-EV algorithm, a Self-Returning Random Walk ([SRRW](https://www.science.org/doi/10.1126/sciadv.aay4055)) is performed to generate a list of nucleosome locations in space followed by a short molecular dynamics simulation to account for excluded volume occupied by each nucleosome. The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which tunes clustering patterns in the SRRW, and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions. The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
 
 ### What this layer does
 
-Layer 1 generates a spatially explicit, three-dimensional polymer configuration in which each particle represents a nucleosome. This configuration provides the ground-truth chromatin geometry used by both the labeling simulation and the downstream domain analyses.
+Layer 1 generates a three-dimensional configuration/distribution of chromatin in which each particle represents a nucleosome. This configuration provides the ground-truth chromatin geometry used by both the labeling simulation and the downstream domain analyses.
+
+
 
 ### Input
 
