@@ -1,0 +1,100 @@
+# Program: continue_sim.in
+# Author: Rivaan Kakkaramadam
+# Description: This script will run an intermediate iteration of a diffusivity simulation of 10000 spheres with a representative size 
+# of the fluorophores used in BrdU-based DNA labeling in 1 SREV-generated model chromatin distribution. 
+# This simulation run will output a trajectory of all 10000 dye labels over the course of this simulation iteration.
+
+
+units lj
+atom_style ellipsoid
+region box block 0 10 0 10 0 10    # box is overwritten by reading dump file
+create_box 3 box                   # Three atom types: 1) chrm 2) mobile fluorophores 3) chromatin-bound fluorophores
+
+# read in SREV config file
+
+read_dump config-relaxed-8.dump 0 x y z add yes box yes
+
+# read in dye label input file which contains most current info on which fluorophores should stay chromatin-bound and which should be mobile
+
+include post-immobil-input.in
+
+# type 1 is SREV nucleosome ellipsoids; type 2 is mobile fluorophore spheres; type 3 is chromatin-bound (SREV-colocalized) fluorophore spheres
+
+set type 1 mass 3.0
+set type 2 mass 1.0
+set type 3 mass 1.0
+
+set type 1 shape 1.0 1.0 0.5 # set SREV nucleosome ellipsoid dimensions
+set type 2 shape 1.0 1.0 1.0 # set BrdU mobile fluorophore ellipsoid (sphere) dimensions 
+set type 3 shape 1.0 1.0 1.0 # set BrdU colocalized fluorophore ellipsoid (sphere) dimensions
+
+group ellip type 1
+group spher type 2
+group coloc type 3
+
+group immob type 1 3 # defining a group of "immobilized particles" (this is SREV nucleosomes and SREV-colocalized fluorophores)
+group allLabel type 2 3 # defining a group of "dye label particles" (this is mobile fluorophores and SREV-colocalized fluorophores)
+
+set group ellip quat/random 87287 # initialize random orientation of all SREV nucleosomes
+
+# below lines dictate rules for interprocessor communication during sim. (sim. is big so defining this properly is needed)
+
+comm_style tiled 
+comm_modify cutoff 3.0 mode single vel yes
+
+balance 1.1 rcb
+
+velocity spher create 2.50 87287 # initialize velocities of objects; all objects in the "immob" group must stay frozen
+velocity immob zero linear 
+velocity immob zero angular
+
+fix freeze immob setforce 0.0 0.0 0.0 # zero forces on all particles in the "immob" group
+
+pair_style gayberne 1.0 1.0 1.0 3.0 # used for specifying SREV-dye label & dye label-dye label interaction potentials
+pair_coeff 1 1  1.0 1.0   1.7 1.7 3.4   0.0 0.0 0.0
+pair_coeff 1 2  1.0 1.0   1.7 1.7 3.4   0.0 0.0 0.0
+pair_coeff 2 2  1.0 1.0   1.7 1.7 1.7   0.0 0.0 0.0
+pair_coeff 2 3  1.0 1.0   1.7 1.7 1.7   0.0 0.0 0.0
+pair_coeff 3 3  1.0 1.0   1.7 1.7 1.7   0.0 0.0 0.0
+
+# define how particles' list of neighbors are constructed -> important for simulation machinations
+
+neighbor 0.7 bin
+neigh_modify every 20 delay 0 check no
+
+# below lines define temp out of whole system
+
+fix 1 all nvt temp   1.0
+fix 2 all balance 500 1.1 rcb
+
+delete_atoms overlap 0.98 ellip ellip # some SREV configs have overlaps despite MD repulsion sim; need to remove overlaps before label sim proceeds
+
+# below computes are for computing temp of different sets of objects for review of sim dynamics
+
+compute         rot all temp/asphere
+compute         0 all property/atom quatw quati quatj quatk shapex shapey shapez
+
+compute		mTempRegularTemp spher temp
+compute		mTAT spher temp/asphere
+
+timestep 0.0005
+
+thermo_style custom step temp c_mTempRegularTemp c_mTAT epair emol etotal press # outputs thermodynamic variables useful for tracking simulation progress
+
+thermo 100
+
+# if below dump lines are uncommented, an output trajectory for visual in Ovito can be made (using above "compute 0" line)
+
+#dump           1 all custom 1000 dump.ellipsoid_continued id type x y z c_0[*]
+#dump_modify    1 colname c_0[1] quatw colname c_0[2] quati colname c_0[3] quatj colname c_0[4] quatk &
+#                 colname c_0[5] shapex colname c_0[6] shapey colname c_0[7] shapez
+#dump_modify    1 sort id
+
+dump mydump allLabel xyz 1000 walkers.xyz # generates dye label trajectory file of this simulation iteration
+dump_modify mydump sort id # ensures particle order in dye label trajectory file is consistent over all timesteps
+
+#uncommenting below line generates restart files (simulation savepoints that you can continue in a new LAMMPS run)
+
+#restart 10000 restart-10nm.*.%
+
+run 20000
