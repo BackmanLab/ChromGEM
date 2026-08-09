@@ -46,6 +46,7 @@ Layer 1 generates a spatially explicit, three-dimensional polymer configuration 
 ### Input
 
 - SR-EV model parameters $\alpha$ and $\phi$.
+- If needed, other minor SR-EV generation settings defined in the source implementation, namely the simulation box dimensions. This would likely need to be tweaked for SREV configurations with $\phi$ > 0.12 to avoid overcrowding in the box before the SREV algorithm approaches the desired $\phi$.
 
 ### Output
 
