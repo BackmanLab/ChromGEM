@@ -1,12 +1,39 @@
 # ChromGEM
+By Ruyi Gong and Rivaan Kakkaramadam
 
 ## Overview
 
-This series of scripts is for running batches of simulations where each simulation is of 10000 fluorophores (dye labels) diffusing within 1 SREV configuration.
+ChromGEM (Chromatin Geometry Empowered Model) is a three-layer computational framework that models how the ground-truth organization of chromatin is transformed by fluorescence labeling and single-molecule localization microscopy (SMLM) measurement physics. The framework begins with a heterogeneous distribution of nucleosomes, simulates the accessibility and binding of fluorescent probes, and then simulates the stochastic localization events detected by an SMLM experiment. The resulting data can be compared directly with the underlying nucleosome distribution to quantify how probe geometry and fluorophore photokinetics influence the apparent structure of chromatin.
 
-In each simulation of fluorophore diffusivity, 10000 mobile dye labels are diffusing about 1 SREV configuration of ellipsoidal nucleosomes that remain frozen/stuck for the whole simulation pipeline. After a certain amount of time, the coordinates of all dye labels are outputted, and a Euclidean distance check is performed for all dye labels at the last outputted timestep to see if the dye label appears to be colocalized with an SREV nucleosome (this is based on the distances between the center of the dye label and the centers of all SREV nucleosomes). If the dye label does appear to be colocalized with a nucleosome, the dye label gets tagged as a dye label that is now "immobilized" to stay bound to that nucleosome. If the dye label does not appear to be colocalized with a nucleosome however, the dye label gets tagged as a dye label that should continue to be mobile in the next simulation iteration. Following this distance check, the dye labels with their updated tags are inputted into a script for continuing the simulation from where it left off. The dye labels that are tagged for immobilization do not move at all; the mobile dye labels continue to diffuse through the SREV configuration. After a certain amount of time, the coordinates of the dye labels are outputted and the distance check is repeated to tag more dye labels for immobilization before the simulation continues. This cycle continues until some user-inputted number of iterations has occurred. A final "wash" step then occurs where all dye labels that had not been tagged for immobilization or colocalized to a nucleosome at that point are "washed" out of the simulated sample, leaving only the dye labels that had bound to the chromatin.
+The three layers are connected sequentially:
 
-Tweaking the array and working directory parameters will enable each simulation to run in parallel.
+1. **Layer 1 — SR-EV Chromatin Generation:** generates ground-truth 3D nucleosome coordinates representative of electron microscopy-observed chromatin in a cell line of choice.
+3. **Layer 2 — Molecular Dynamics Simulation of Label Probes:** places mobile EdU- or BrdU-associated probes around the fixed nucleosome configuration, simulates probe diffusion and binding, and removes unbound probes in a simulated wash.
+4. **Layer 3 — Monte Carlo Simulation of Fluorophore Emissions:** converts the post-wash probe coordinates into stochastic SMLM localization events using experimentally informed blinking and localization-uncertainty distributions.
+
+The downstream workflows operate on voxel-based 3D TIFF volumes rather than coordinate lists. The nucleosome, probe, or simulated-localization coordinates are therefore binned into a 3D grid and smoothed with a 3D Gaussian filter before domain identification and analysis. The workflows then identify packing-domain centers, extract individual three-dimensional domains, calculate their radial density and mass-scaling properties, and generate the plots used in Figure 3d–e.
+
+```text
+Layer 1: SR-EV nucleosome coordinates
+              |
+              v
+Layer 2: accessible, bound-probe coordinates
+              |
+              v
+Layer 3: simulated SMLM localization coordinates
+              |
+              v
+Coordinate binning + 3D Gaussian blur (radius = 5 pixels)
+              |
+              v
+Voxel-based 3D TIFF volumes
+              |
+              v
+3D domain identification and domain analysis
+              |
+              v
+Radial-density plots
+```
 
 ## Repo Contents
 
