@@ -33,14 +33,6 @@ rm log*
 rm dump*
 rm wc.txt
 
-# load packages
-
-module purge
-
-module load lammps/20200303-openmpi-4.0.5-intel-19.0.5.281
-
-module load mpi/openmpi-4.1.4-gcc
-
 # automatically trade out config-specific filenames in scripts
 
 lammpsdump="config-relaxed-${SLURM_ARRAY_TASK_ID}.dump"
