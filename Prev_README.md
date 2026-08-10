@@ -1,0 +1,426 @@
+# ChromGEM
+By Ruyi Gong and Rivaan Kakkaramadam
+
+## Overview
+
+**ChromGEM (Chromatin Geometry Empowered Model)** is a three-layer computational framework that models how the ground-truth organization of chromatin is transformed by fluorescence labeling and single-molecule localization microscopy (SMLM) measurement physics. The framework begins with a heterogeneous distribution of nucleosomes, simulates the accessibility and binding of fluorescent probes, and then simulates the stochastic localization events detected by an SMLM experiment. The resulting data can be compared directly with the underlying nucleosome distribution to quantify how probe geometry and fluorophore photokinetics influence the apparent structure of chromatin.
+
+The three layers are connected sequentially:
+
+1. **Layer 1 — SR-EV Chromatin Generation:** generates ground-truth 3D nucleosome coordinates representative of electron microscopy-observed chromatin in a cell line of choice.
+3. **Layer 2 — Molecular Dynamics Simulation of Label Probes:** places mobile EdU- or BrdU-associated probes around the fixed nucleosome configuration, simulates probe diffusion and binding, and removes unbound probes in a simulated wash.
+4. **Layer 3 — Monte Carlo Simulation of Fluorophore Emissions:** converts the post-wash probe coordinates into stochastic SMLM localization events using experimentally informed blinking and localization-uncertainty distributions.
+
+The downstream workflows operate on voxel-based 3D TIFF volumes rather than coordinate lists. The nucleosome, probe, or simulated-localization coordinates are therefore binned into a 3D grid and smoothed with a 3D Gaussian filter before domain identification and analysis. The workflows then identify packing-domain centers, extract individual three-dimensional domains, calculate their radial density and mass-scaling properties, and generate the plots used in Figure 3d–e.
+
+```text
+Layer 1: SR-EV nucleosome coordinates
+              |
+              v
+Layer 2: accessible, bound-probe coordinates
+              |
+              v
+Layer 3: simulated SMLM localization coordinates
+              |
+              v
+Coordinate binning + 3D Gaussian blur (radius = 5 pixels)
+              |
+              v
+Voxel-based 3D TIFF volumes
+              |
+              v
+3D domain identification and domain analysis
+              |
+              v
+Radial-density plots
+```
+
+## Layer 1: SR-EV Model Chromatin Generation
+
+In the SR-EV algorithm, a Self-Returning Random Walk ([SRRW](https://www.science.org/doi/10.1126/sciadv.aay4055)) is performed to generate a list of nucleosome locations in space followed by a short molecular dynamics simulation to account for excluded volume occupied by each nucleosome. The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which tunes clustering patterns in the SRRW, and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions because they were previously demonstrated to generate chromatin configurations that align with ChromSTEM observations of domain distributions in HCT116. The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
+
+### What this layer does
+
+Layer 1 generates a three-dimensional distribution of chromatin in which each particle represents a nucleosome. The Self-Returning Excluded Volume model begins by generating a Self-Returning Random Walk (SRRW), a modified random walk that is guided by two “return rules” for dictating the probability of return steps and forward steps in the walk:
+
+$$P_R(U_0) = \frac{(U_0)^{-\alpha}}{\alpha}$$ 
+$$P_J(U_1>1) = \frac{\alpha+1}{(U_1)^{\alpha+2}}$$
+
+Equation 1 computes the return probability ($P_R$) as a function of $𝑈_0$, the length of the previous step over which the walk may return, and input folding parameter $\alpha$. If the walk does not return based on Equation 1, the model proceeds with Equation 2 to compute the forward (”jump”) probability ($P_J$). $P_J$ is computed as a function of $𝑈_1$ (the length of the next step in the wal)  and $\alpha$. The randomization algorithm for step lengths and orientations is enumerated in Carignano, Kroeger, et al., *eLife*, 2024. 
+
+Critically, these return rules can be modulated via $\alpha$, an input parameter regulating folding in the walk. The number of points (nucleosomes) in the walk is tuned via $\phi$, the second input parameter of SR-EV. The crowding parameter $\phi$ denotes the average volume fraction of chromatin in the space in which the configuration is generated. $\phi$ can be tuned to generate chromatin configurations that correspond to a wide range of cell types and stages of differentiation. Following the generation of the SRRW, a brief molecular dynamics simulation is performed to enforce repulsion between any points in the walk that overlap in a manner unrealistic of nucleosomes and thus enable the SR-EV model to produce model chromatin distributions that take into account the excluded volume effects of each nucleosome. This configuration provides the ground-truth chromatin geometry used by both the labeling simulation and the downstream domain analyses.
+
+
+### Input
+
+- SR-EV model parameters $\alpha$ and $\phi$.
+- If needed, other minor SR-EV generation settings defined in the source implementation, namely the simulation box dimensions. This would likely need to be tweaked for SREV configurations with $\phi$ > 0.12 to avoid overcrowding in the box before the SREV algorithm approaches the desired $\phi$.
+
+### Output
+
+- A three-dimensional SR-EV nucleosome configuration, normally stored as a LAMMPS-style dump file containing particle coordinates, unique particle identifiers, and particle types (all set to 1 to indicate they are nucleosomes).
+- These nucleosome coordinates are used as:
+  - the model chromatin substrate for labeling in Layer 2;
+  - the ground-truth nucleosome coordinates in Layer 3; and
+  - the source data for 3D packing domain identification and analysis.
+
+## Layer 2: Molecular-Dynamics Simulation of the Label Probe
+
+Layer 2 is contained in [`Layer_2/`](Layer_2/) and includes the execution scripts for EdU and BrdU labeling used in the study. The simulations use LAMMPS to model 10,000 fluorescent label probes diffusing about a fixed SR-EV nucleosome configuration.
+
+### Required software
+
+1. [LAMMPS](https://www.lammps.org/) (the study used the March 3, 2020 version), built with the ASPHERE, MPI, MPIIO, OpenCL, and OpenMP packages.
+2. [Open MPI](https://www.open-mpi.org/software/ompi/v4.1/) version 4.1.4.
+3. A [Fortran 90 compiler](https://fortran-lang.org/learn/os_setup/), such as `gfortran`.
+4. *Not required but highly recommended*: A SLURM-compatible computing cluster for the supplied batch-execution script.
+
+### What this layer does
+
+For each SR-EV configuration, Layer 2 performs the following operations:
+
+1. `InitWalkers.f90` randomly initializes 10,000 probe positions inside the simulation box while rejecting positions that overlap nucleosomes or previously placed probes.
+2. `getconfig_nooverlaps.in` prepares the nucleosome configuration and remove rare unrealistic nucleosome overlaps before probe diffusion is simulated.
+3. `overlapfilter*.in` generate information necessary to maintain a constant temperature throughout binding iterations for input into `first_sim.in` and `continue_sim.in`.
+4. `first_sim.in` performs the first LAMMPS diffusion interval and writes the probe trajectory to `walkers.xyz`.
+5. `ImmobilConversion.f90` reads the final saved frame, calculates the probe-to-nucleosome distance, and based on this distance assigns each probe a state:
+   - type 2: mobile/unbound;
+   - type 3: nucleosome-colocalized/immobilized.
+6. `continue_sim.in` uses the updated probe states to continue the simulation. Bound probes remain fixed, while unbound probes continue to diffuse.
+7. The immobilization and continuation steps are repeated for the number of iterations specified in `execute_sim_in_array.sh`.
+8. `FinalWash.f90` performs the final distance check and removes all probes that remain unbound, producing the simulated post-wash labeled chromatin sample.
+
+The supplied BrdU scripts use an effective probe diameter of 1 reduced unit (10 nm), whereas the supplied EdU scripts use an effective diameter of 0.2 reduced units (2 nm). Throughout Layer 2, `1 reduced unit = 10 nm`.
+
+### Input
+
+- One SR-EV nucleosome configuration per simulation directory, in LAMMPS dump format.
+- User-edited parameters in the Fortran, LAMMPS, and SLURM scripts, including:
+  - input SR-EV configuration filename;
+  - simulation box lengths and lower bounds (must be consistent with the SREV-outputted file);
+  - probe size;
+  - number of probes;
+  - number of diffusion/immobilization iterations;
+  - *Optional but highly recommended:* SLURM array range, account, working directory, and source-script directory.
+
+### Output
+
+- `walkerinput.in`: initial nonoverlapping probe coordinates formatted as LAMMPS `create_atoms` commands.
+- `walkers.xyz`: probe trajectory from the current LAMMPS diffusion interval.
+- `post-immobil-input.in`: updated probe coordinates and particle types for the next interval.
+- Edited/overlap-filtered nucleosome configuration used for subsequent calculations.
+- Post-wash `.xyz` files containing only probes classified as chromatin-bound, for example:
+  - `EdU-2nm-washed.xyz`;
+  - `BrdU-10nm-washed.xyz`.
+
+The post-wash EdU and BrdU coordinate files, together with the edited SR-EV nucleosome configuration, are the principal inputs to Layer 3. The same ground-truth nucleosome and post-wash probe distributions can also be voxelized and analyzed through the parallel 3D domain-analysis branch. Layer 3 localizations are therefore the simulated SMLM endpoint; they are not required by the supplied 3D radial-density notebook.
+
+The post-wash EdU and BrdU coordinate files, together with the edited SR-EV nucleosome configuration, are the principal inputs to Layer 3. The same ground-truth nucleosome and post-wash probe distributions can also be voxelized and analyzed through the parallel 3D domain-analysis branch. Layer 3 localizations are therefore the simulated SMLM endpoint; they are not required by the supplied 3D radial-density notebook.
+
+## Layer 3: Monte Carlo Simulation of Fluorophore Emissions
+
+Notebook: [`Layer_3_Monte_Carlo/Layer 3 Monte Carlo simulation_github.ipynb`](Layer_3_Monte_Carlo/Layer%203%20Monte%20Carlo%20simulation_github.ipynb)
+
+### What this notebook does
+
+The Layer 3 notebook converts the physical probe locations produced by Layer 2 into the localization events expected from an SMLM measurement. It performs four main tasks:
+
+1. Reads the pre-wash and post-wash EdU and BrdU coordinates and the edited ground-truth nucleosome coordinates from `.xyz` files.
+2. Converts the Layer 2 coordinates from reduced units to nanometers by multiplying each coordinate by 10.
+3. Selects probes and nucleosomes within a user-defined 3D region and optionally randomly subsamples them for visualization or computation. 
+4. Applies an experimentally informed Monte Carlo model to every selected post-wash probe:
+   - the number of localization events per fluorophore is sampled from a negative-binomial distribution;
+   - the radial localization error is sampled from a log-normal distribution;
+   - a uniformly sampled angle distributes that error in the imaging plane;
+   - the sampled displacement is added to the probe coordinate to generate a simulated detected localization.
+
+The implemented `generateLocalization()` function records both the true fluorophore position and every simulated localization generated from it. The model parameters are set directly inside this function and should be changed when modeling a different fluorophore, buffer, acquisition condition, or experimentally measured photokinetic distribution.
+
+### Input
+
+The example files are stored in `Layer_3_Monte_Carlo/Layer 3 input/`:
+
+- `EdU-2nm.xyz`: EdU probe coordinates before the simulated wash.
+- `EdU-2nm-washed.xyz`: chromatin-bound EdU probe coordinates after the simulated wash.
+- `BrdU-10nm.xyz`: BrdU probe coordinates before the simulated wash.
+- `BrdU-10nm-washed.xyz`: chromatin-bound BrdU probe coordinates after the simulated wash.
+- `edited-config-3.xyz`: "edited" ground-truth SR-EV nucleosome coordinates.
+  - This "edited" file is generated in Layer 2; before performing the label diffusivity simulations, the original SREV-generated model chromatin configurations pass through an initial filter In Layer 2 that screens out any nucleosome positions overlapping in a manner unrealistic of the excluded volume occupied by nucleosomes. This step is vital to prevent simulation crashes. These screened nucleosome positions were 0-25 out of the outputted 530000+. Label diffusivity simulations are then performed on those "edited" files.
+
+User-defined notebook parameters include the input and output directories, the `x`, `y`, and `z` bounds of the analyzed region, the sampling factor, and the negative-binomial and log-normal distribution parameters used by the Monte Carlo model.
+
+Each coordinate file is expected to contain whitespace-separated rows of the form:
+
+```text
+particle_type  x  y  z
+```
+
+### Output
+
+- `df_locali_EdU.csv`: simulated EdU localization events. Columns contain the parent fluorophore position, localization-event number, and simulated `x [nm]` and `y [nm]` coordinates.
+- `df_locali_BrdU.csv`: corresponding simulated BrdU localization events.
+- `df_fluor_EdU.csv`: selected ground-truth post-wash EdU probe positions in the imaging plane.
+- `df_fluor_BrdU.csv`: selected ground-truth post-wash BrdU probe positions in the imaging plane.
+- `df_fluor_nucleosome.csv`: selected ground-truth nucleosome positions in the imaging plane.
+- Diagnostic scatter plots comparing label distributions before and after the simulated wash.
+
+These CSV files provide paired ground-truth and simulated-measurement datasets for downstream quantitative comparison.
+
+## Coordinate-to-Volume Conversion for Downstream Analysis
+
+The outputs of Layers 1–3 are coordinate-based datasets, whereas the downstream 3D domain-identification and domain-analysis workflows operate on voxel-based multipage TIFF volumes. An additional preprocessing step is therefore required to convert a selected coordinate distribution into a volumetric density image:
+
+1. Assign the `x`, `y`, and `z` coordinates to voxels in a 3D grid.
+2. Count the coordinates falling within each voxel to generate a 3D occupancy or density volume.
+3. Apply a 3D Gaussian blur with a radius of 5 pixels to the voxelized volume.
+4. Save the smoothed volume as a multipage TIFF file.
+
+For the nucleosome coordinates, this procedure generates:
+
+```text
+Nucleosome_Gaussian_rad5.tif
+```
+
+This TIFF represents the spatially smoothed 3D nucleosome-density distribution and is the primary input for both 3D domain identification and the subsequent 3D domain-property analysis. Gaussian smoothing reduces voxel-scale fluctuations introduced by coordinate discretization and creates a continuous local-density field from which packing-domain centers and radial-density profiles can be calculated.
+
+Equivalent TIFF volumes can be generated from the EdU, BrdU, or simulated-localization coordinates when those distributions are analyzed using the same volume-based workflow. For matched comparisons, all coordinate datasets must use the same grid dimensions, voxel size, coordinate origin, and Gaussian-filter parameters.
+
+## Downstream Analysis 1: Domain Identification in 3D
+
+Directory: [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/)
+
+### What the domain identification script does
+
+This domain identification workflow takes after the domain identification workflow in 2D chromatin scanning transmission electron microscopy (ChromSTEM) data ([Li et al., *Scientific Reports* 2022](https://www.nature.com/articles/s41598-022-16028-2) [W.S.Li, Carter, Almassalha et al., *Science Advances* 2025](https://www.science.org/doi/10.1126/sciadv.adp0855)). The domain identification workflow locates the centers of local chromatin packing domains in the ground-truth SR-EV configuration:
+
+1. Converts the 3D nucleosome coordinates into a voxelized chromatin-density volume.
+2. Applies a `3 x 3 x 3` maximum filter to identify candidate local maxima. A voxel is retained as a candidate when its intensity equals the maximum intensity in its local neighborhood.
+3. For each candidate center with intensity `I_c`, forms a tolerance mask containing voxels that satisfy `I_c - I(r) <= T`, where `T` is the selected intensity tolerance (the standard deviation of voxel intensities was used in the study).
+4. Applies 26-neighbor connected-component analysis to the tolerance mask and retains only the component containing the candidate center. This connected component is the candidate's dominant region.
+5. Ranks candidates from highest to lowest intensity. A lower-intensity candidate is discarded if its coordinate lies within the dominant region of a previously accepted higher-intensity candidate. This merges neighboring maxima that belong to the same tolerance-defined packing domain and avoids duplicate centers.
+6. Returns the surviving coordinates as the 3D packing-domain centers.
+
+### Input
+
+- `Nucleosome_Gaussian_rad5.tif`, generated by voxelizing the nucleosome coordinates and applying a 3D Gaussian blur with a radius of 5 pixels.
+- Voxel size and volume dimensions.
+- Maximum-filter neighborhood size (`3 x 3 x 3` in the study).
+- Intensity tolerance `T`.
+
+### Output
+
+- An `N x 3` array of domain-center voxel coordinates, typically stored as a NumPy `.npy` file.
+- The example downstream filename is `Nucleosome_maxima (domain center)_github.npy`.
+- Optional intermediate products may include the voxelized nucleosome volume, candidate-maxima mask, and accepted-center visualization.
+
+The detected center coordinates are used by the 3D domain-analysis notebook to center and extract one cubic region of interest for each domain.
+
+## Downstream Analysis 2: Domain Analysis in 3D
+
+Notebook: [`Domain analysis in 3D/Fig3_3D_domain_analysis_github.ipynb`](Domain%20analysis%20in%203D/Fig3_3D_domain_analysis_github.ipynb)
+
+### What this notebook does
+
+This notebook characterizes each detected packing domain in a 3D density volume. For every supplied domain center, it:
+
+1. Measures the center's distance from all six volume boundaries and sets the available half-width, `ahw`, to the smaller of this distance and the maximum requested half-width `hw`.
+2. Skips centers for which `ahw` is smaller than `ahw_thresh`, preventing analysis of domains with insufficient surrounding volume.
+3. Extracts an odd-sized cubic region of interest centered on the domain.
+4. Generates a summed 2D projection of the extracted domain.
+5. Normalizes the extracted central subvolume and bins voxel intensities into concentric 3D spherical shells.
+6. Divides the intensity in each shell by the number of sampled voxels in that shell to calculate radial density (`meanRD`).
+7. Calculates shell mass and cumulative enclosed mass by scaling the radial-density terms by spherical surface-area and volume factors.
+8. Computes the local slope of log cumulative mass versus log radius with a moving fitting window. This scale-dependent slope represents the local mass-scaling exponent.
+9. Saves the plots and numerical variables for every domain.
+
+Important notebook parameters include:
+
+- `dr = 2`: radial step/voxel spacing used to construct the radius array;
+- `hw = 150`: maximum domain half-width in voxels;
+- `cw = 5`: central-window half-width excluded from the usable radial extent;
+- `ahw_thresh = 25`: minimum accepted half-width;
+- `windowsize = 5`: default moving-window size for slope estimation.
+
+### Input
+
+- A 3D nucleosome-density TIFF, such as `Nucleosome_Gaussian_rad5.tif`.
+- Domain-center coordinates as an `N x 3` array, ideally loaded from `Nucleosome_maxima (domain center)_github.npy`.
+- Output directory and the analysis parameters described above.
+
+The coordinate ordering must match the TIFF axis ordering used by the notebook. The current code maps each center into the array as `(slice, row, column)` during ROI extraction; this convention should be verified whenever a new volume or center file is used.
+
+### Output
+
+For every accepted domain `NN`, the notebook writes:
+
+- `DomainProjNN.tif`: summed 2D projection of the 3D domain.
+- `DomainMSRingNN.tif`: log-log plot of shell mass versus radius.
+- `DomainMSNN.tif`: log-log plot of cumulative enclosed mass versus radius.
+- `DomainMSFirstDevNN.tif`: scale-dependent slope of the cumulative mass-scaling curve.
+- `RadialDensityNN.tif`: radial-density curve.
+- `DomainNN.mat`: numerical results containing `meanMSRing`, `sdMSRing`, `meanMS`, `sdMS`, `rslope`, `slope`, `meanRD`, `sdRD`, `r_domain`, `cw`, `rn`, and the domain centroid.
+
+The `DomainNN.mat` files are the inputs to the Figure 3d–e radial-density plotting notebook.
+
+## Downstream Analysis 3: Domain Radial Density Plot (Figure 3d–e)
+
+Notebook: [`Domain Radial Density Plot (Figure 3 d e)/Fig3de.RadialDensityPlot_github.ipynb`](Domain%20Radial%20Density%20Plot%20%28Figure%203%20d%20e%29/Fig3de.RadialDensityPlot_github.ipynb)
+
+### What this notebook does
+
+This notebook compares the radial organization of the ground-truth nucleosomes with the accessible EdU and BrdU label distributions for a representative domain. It:
+
+1. Loads the MATLAB result files generated by the 3D domain-analysis workflow for EdU, BrdU, and nucleosomes.
+2. Extracts `meanRD` from each file.
+3. Normalizes each radial-density curve by its own maximum so the spatial profiles can be compared independent of absolute signal magnitude.
+4. Plots the normalized EdU, BrdU, and nucleosome radial-density profiles.
+5. Calculates and plots the first discrete derivative of the normalized EdU and BrdU profiles to highlight changes in radial accessibility.
+
+### Input
+
+- `Domain04_EdU_github.mat`.
+- `Domain04_BrdU_github.mat`.
+- `Domain04_Nucleosome_github.mat`.
+
+Each `.mat` file must contain a one-dimensional `meanRD` array generated using the same center, voxel size, radial sampling, and ROI definition. Example files are supplied in the notebook's `input/` directory.
+
+> **Filename note:** The repository currently stores `Domain04_Nucleosome_github.mat`, whereas the notebook loads `Domain04_nucleosome_github.mat`. This capitalization should be made consistent for case-sensitive operating systems.
+
+### Output
+
+- A normalized radial-density plot comparing EdU, BrdU, and nucleosome profiles (Figure 3d).
+- A first-derivative plot comparing the EdU and BrdU normalized radial-density profiles (Figure 3e).
+- Figures can be saved in any Matplotlib-supported format by setting the output path in `plt.savefig()`.
+
+## End-to-End Data Handoff
+
+| Stage | Primary input | Primary output | Used by |
+|---|---|---|---|
+| Layer 1 | $\alpha$, $\phi$, SR-EV settings | 3D nucleosome configuration | Layer 2; 3D domain identification |
+| Layer 2 | SR-EV nucleosomes; EdU/BrdU probe settings | Pre-wash and post-wash probe `.xyz` files; edited nucleosome configuration | Layer 3 |
+| Layer 3 | Post-wash probes; ground-truth nucleosomes | Simulated SMLM localization CSVs and ground-truth coordinate CSVs | SMLM-vs-ground-truth comparisons |
+| Coordinate-to-volume conversion | Nucleosome, probe, or localization coordinates | Gaussian-smoothed 3D TIFF volume | Volume-based downstream analysis |
+| 3D domain identification | `Nucleosome_Gaussian_rad5.tif` | Domain-center coordinates (`.npy`) | 3D domain analysis |
+| 3D domain analysis | Density volume; domain centers | Per-domain TIFF plots and `DomainNN.mat` files | Figure 3d–e plotting |
+| Radial-density plotting | Matched EdU, BrdU, and nucleosome `DomainNN.mat` files | Normalized radial-density and derivative figures | Figure 3d–e |
+
+## Python Dependencies
+
+The notebooks require the following key Python packages:
+
+```text
+numpy 1.26.4
+pandas 2.1.4
+matplotlib 3.8.0
+scipy 1.11.4
+tifffile 2023.4.12
+```
+
+Not every imported package is used by every notebook. A dedicated environment file is recommended for long-term reproducibility.
+
+## Reproducibility Notes
+
+- Replace the blank or Windows-style input/output paths in the notebooks before execution.
+- Set explicit random seeds for the Layer 3 subsampling and Monte Carlo simulation if exactly reproducible localization sets are required.
+- Confirm that all coordinate units are correct. Layer 2 uses reduced units (`1 ru = 10 nm`), while Layer 3 converts coordinates to nanometers.
+- Use the same coordinate origin, grid dimensions, voxel size, and Gaussian-blur parameters when generating matched nucleosome, EdU, BrdU, or localization TIFF volumes.
+- Confirm axis ordering between domain-center coordinates and TIFF volumes.
+- Use identical centers and radial-analysis parameters when comparing EdU, BrdU, and nucleosome profiles.
+
+
+## References
+
+1. Carignano, M. A., Kroeger, B., et al. Chromatin packing domains in HCT-116 cells are structurally heterogeneous and suppress transcription. *eLife* (2024). [https://elifesciences.org/articles/97604](https://elifesciences.org/articles/97604)
+2. Yeo, W.-H., et al. Investigating uncertainties in single-molecule localization microscopy using experimentally informed Monte Carlo simulation. *Nano Letters* **23**, 7253–7259 (2023).
+3. Thompson, A. P., et al. LAMMPS—a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. *Computer Physics Communications* **271**, 108171 (2022).
+4. Brown, W. M., Petersen, M. K., Plimpton, S. J. & Grest, G. S. Liquid crystal nanodroplets in solution. *Journal of Chemical Physics* **130**, 044901 (2009).
+
+## System Requirements
+
+### Hardware Requirements
+
+* It is recommended to allocate at least 30GB and 16 processors to each simulation. Each simulation will take up to 48 hours to run. ChromGEM can be run in serial (simulated SMLM in one chromatin configuration at a time) or in parallel (simulated SMLM in multiple chromatin configurations at once).
+* The [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/) script in particular will take 5+ hours to run for workstation with 32GB of RAM.
+
+## Workflow
+
+The order of operations is the following:
+
+1. Go to the directory containing the SREV configuration (ideally should have 1 SREV configuration per folder).
+
+2. Copy over the fluorophore diffusivity simulation scripts to that directory.
+
+3. Load the LAMMPS Molecular Dynamics and MPI packages.
+
+4. Enter SREV configuration filenames into the fluorophore diffusivity scripts.
+
+5. Initialize the random positions of the dye labels within the simulation box containing the SREV configuration.
+
+5. Run a brief LAMMPS simulation to generate a version of the SREV configuration that lacks overlapping nucleosomes.
+
+6. Run a brief LAMMPS simulation to output the number of SREV nucleosomes that will be used in the simulation. This is vital for properly setting the temperature of the mobile objects at the desired level.
+
+7. Run the first iteration of the simulation. This simulation run will output a trajectory of all 10000 dye labels over the course of this simulation iteration.
+
+For *n* number of user-specified iterations, loop through Steps #8-10 below:
+
+> 8. Input the dye label trajectory file to perform the distance-based colocalization check + appropriate tagging of all dye labels and generate a new dye label input file containing those tags.
+> 9. Run a brief simulation to obtain output files that give the number of immobilized dye labels and stuck SREV nucleosomes in the simulation. This is important for recomputing the parameter needed to properly set the temperature of the mobile objects at the desired level.
+> 10. Run the next iteration of the simulation with the new dye label input file. This simulation run will output a trajectory of all 10000 dye labels over the course of this simulation iteration.
+
+11. Simulate a "wash" step of the simulated labeled chromatin sample by filtering out all dye labels that have not bound to an SREV nucleosome by that time. Output the coordinates of these dye labels still present in the model chromatin post-wash. This output is your post-wash labeled model chromatin sample. 
+
+
+## BEFORE YOU BEGIN:
+
+Set up your directory of SREV configurations in the following manner:
+
+
+- Have a production directory that is for containing all of your SMLM simulations in your set of input SREV configurations. This directory should ONLY contain SREV configurations (configs) that were made with the same input parameters (ex: all the SREV configs in this directory being made with input alpha = 1.15 & phi = 0.12 is good, some SREV configs in this directory being made with input alpha = 1.15 & phi = 0.12 and other SREV configs in this directory being made with input alpha = 1.15 & phi = 0.16 is bad).
+  
+
+- For the *n* number of SREV configs in this production directory, have *n* directories (one for each SREV config). Each SREV config should be assigned its own index that is between 1 to *n*. The SREV config file name should be named as "config-$_i_.dump", where $_i_ is the index of that SREV config. Each of the directories within the production directory should also be assigned its own index that is between 1 to *n*. Each of these directories within the production directory should be named as "Config_$_i_", where $_i_ is the assigned index of that directory. Each of these directories should only contain the SREV config that is of the same index as the directory.
+
+<ins>**Specify the simulation box dimensions.**</ins> 
+
+
+- This should match the SREV config file dimensions. All these scripts are in units of reduced units or "ru", where 1 ru = 10 nm.
+Go to InitWalkers.f90, ImmobilConversion.f90, and FinalWash.f90, and ensure all xlength, ylength, and zlength variables are consistent with the box dimensions indicated in the SREV config file and that in the InitWalkers.f90 file all xlowerbound, ylowerbound, and zlowerbound variables are consistent with the lowerbound dimensions stipulated in lines 6-8 of the SREV config file. To identify the xlowerbound, ylowerbound, and zlowerbound information in the SREV config file, understand that line 6 specifies the lower and upper limits of the box in the x direction, line 7 specifies the lower and upper limits of the box in the y direction, and line 8 specifies the lower and upper limits of the box in the z direction. In lines 6-8, the order of the values is lower limit in that dimension and then upper limit in that dimension. Understand that these box dimensions are given in ru and in scientific notation. So, if line 7 says " -1.0000000000000000e+02 1.0000000000000000e+02", that means the box dimension in the y dimension is -100 ru to 100 ru. This means you should go to the lines that define the ylowerbound and ylength variables and set ylowerbound as -100 and ylength as 200 (as y_upper_limit - y_lower_limit = ylength).
+
+
+<ins>**Update the bash file.**</ins>
+
+
+Open the execute_sim_in_array.sh file in EdU_Execution_Scripts and in BrdU_Execution_Scripts. Make the following updates:
+- In line #3: change the range specified in the definition of array to match the range of SREV configs you wish to simulate SMLM labeling in. So, if you would like to simulate SMLM labeling in 100 SREV configs, change the "_#SBATCH --array=1-10_" line to be "_#SBATCH --array=1-100_".
+
+  
+- In line #13: change the production directory for the location of the directory containing your SREV configs and utilize the SLURM_ARRAY_TASK_ID variable to tell the supercomputer how to locate each SREV config. So, if you have 100 SREV configs in a directory with the name "_/home/my_SMLM_simulations/SREV_configs_made_with_phi_0.12_alpha_1.15/_" and in this directory, each SREV configuration of index _i_ is in a directory with a name of "_SREV_Configi_" (ex: "SREV_Config1", "SREV_Config2", "SREV_Config3", etc.), change the "_dirname="/projects/p31375/SMLM-SREV-main/BrdU_Phi08/Config_${SLURM_ARRAY_TASK_ID}"_" line to be "_dirname="/home/my_SMLM_simulations/SREV_configs_made_with_phi_0.12_alpha_1.15/SREV_Config_${SLURM_ARRAY_TASK_ID}"_".
+
+  
+- In line 19: change the source directory line for the location of the directory containing the BrdU and EdU SMLM simulation execution scripts. These are the locations of the BrdU_Execution_Scripts folder and EdU_Execution_Scripts folder on your machine/workspace. So, if the BrdU_Execution_Scripts folder and EdU_Execution_Scripts folder are in a directory with the name _"/home/SMLM_Execution_Scripts/BrdU_Execution_Scripts/"_ and _"/home/SMLM_Execution_Scripts/EdU_Execution_Scripts/"_ respectively, in the execute_sim_in_array.sh file located in BrdU_Execution_Scripts, change the "_cp /projects/p31375/SMLM-SREV-main/BrdU_Execution_Scripts/* ._" line to "_cp /home/SMLM_Execution_Scripts/BrdU_Execution_Scripts/* ._" and in the execute_sim_in_array.sh file located in EdU_Execution_Scripts, change the "_cp /projects/p31375/SMLM-SREV-main/EdU_Execution_Scripts/* ._" line to "_cp /home/SMLM_Execution_Scripts/EdU_Execution_Scripts/* ._" . Make sure to preserve the "_* ._" at the end!
+
+  
+- In line 2 and 9: change the line "_#SBATCH --account=p31375_" to specify instead the project you would be running this through on Quest and change the "_#SBATCH --output=log.%j_" to your preferred name for output logs.
+
+## HOW TO EXECUTE:
+
+Go to the directory containing the execution scripts (so EdU_Execution_Scripts or BrdU_Execution_Scripts). After you complete all the steps in this README's "BEFORE YOU BEGIN:" section, type "sbatch execute_sim_in_array.sh". This will submit the SMLM simulation jobs over all your inputted SREV configs to Quest.
+
+## Conceptual Notes
+
+### Why is redefining the temperature parameters important?
+
+Over the course of all the simulation iterations, it is important that you are collecting molecule localizations that occur at the same temperature. When specifying the input target temperature parameters, LAMMPS takes that to specify the temperature of the whole simulation. Since the vast majority of the simulation particles are SREV nucleosome ellipsoids that are kept stuck in place, this complicates the actual energy that gets distributed among the mobile particles to have them move at the specified temperature. Therefore, the input temperature parameters that are given to the LAMMPS simulator program should take this into account so that the mobile particles are actually diffusing at your desired target temperature (in this case the script is set to simulate the objects at a target temperature T = 2.50*). Since the number of particles the simulation should mark as immobilized gets updated with each iteration, the temperature to input is re-computed each iteration to account for that updated number.
+
+The equation that computes the temperature to input to produce the desired temperature is the following: number_of_mobile_particles / (number_of_mobile_particles + number_of_immobile_particles) * desired_temp = temp_to_input
+
+## References and Acknowledgements
+
+The simulations scripted here were performed using the LAMMPS Molecular Dynamics Simulator<sup>1</sup>. For more on LAMMPS, consult https://www.lammps.org . Interactions between the particles were modeled using LAMMPS' *pair gayberne* framework for modeling Gay-Berne interaction potentials between ellipsoidal particles<sup>2</sup>.
+
+1. LAMMPS - A flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales, Comp. Phys. Comm. 271, 108171 (2022)
+
+2. Brown, W. M., Petersen, M. K., Plimpton, S. J., & Grest, G. S. (2009). Liquid crystal nanodroplets in solution. *The Journal of Chemical Physics, 130*(4), 044901. https://doi.org/10.1063/1.3058435
+
+We acknowledge the contributions of Dr. Marcelo Carignano in determining the formula for obtaining the desired simulation temperature based on the number of mobile particles and immobilized particles.
