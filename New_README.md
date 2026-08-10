@@ -101,16 +101,22 @@ Layer 2 is contained in [`Layer_2/`](Layer_2/) and includes the execution script
 
 For each SR-EV configuration, Layer 2 performs the following operations:
 
-1. `InitWalkers.f90` randomly initializes 10,000 probe positions inside the simulation box while rejecting positions that overlap nucleosomes or previously placed probes.
-2. `getconfig_nooverlaps.in` prepares the nucleosome configuration and remove rare unrealistic nucleosome overlaps before probe diffusion is simulated.
-3. `overlapfilter*.in` generate information necessary to maintain a constant temperature throughout binding iterations for input into `first_sim.in` and `continue_sim.in`.
-4. `first_sim.in` performs the first LAMMPS diffusion interval and writes the probe trajectory to `walkers.xyz`.
-5. `ImmobilConversion.f90` reads the final saved frame, calculates the probe-to-nucleosome distance, and based on this distance assigns each probe a state:
+
+1. Go to the directory containing the SREV configuration (ideally should have 1 SREV configuration per folder).
+2. Copy over the fluorophore diffusivity simulation scripts to that directory.
+3. Load the LAMMPS Molecular Dynamics and MPI packages.
+4. Enter SREV configuration filenames into the fluorophore diffusivity scripts.
+5. `InitWalkers.f90` randomly initializes 10,000 probe positions inside the simulation box while rejecting positions that overlap nucleosomes or previously placed probes.
+6. `getconfig_nooverlaps.in` prepares the nucleosome configuration and remove rare unrealistic nucleosome overlaps before probe diffusion is simulated.
+7. `overlapfilter.in` outputs the number of SREV nucleosomes from Step #6, which is used to compute the LAMMPS parameter needed to maintain a constant temperature throughout binding iterations for input into `first_sim.in`.
+8. `first_sim.in` performs the first LAMMPS diffusion interval and writes the probe trajectory to `walkers.xyz`.
+9. For *n* number of user-specified iterations, loop through Steps #10-12 below:
+> 10. `ImmobilConversion.f90` reads the final saved frame, calculates the probe-to-nucleosome distance, and based on this distance assigns each probe a state:
    - type 2: mobile/unbound;
    - type 3: nucleosome-colocalized/immobilized.
-6. `continue_sim.in` uses the updated probe states to continue the simulation. Bound probes remain fixed, while unbound probes continue to diffuse.
-7. The immobilization and continuation steps are repeated for the number of iterations specified in `execute_sim_in_array.sh`.
-8. `FinalWash.f90` performs the final distance check and removes all probes that remain unbound, producing the simulated post-wash labeled chromatin sample.
+> 11. `overlapfilter_continue.in` outputs the number of immobilized dye labels and stuck SREV nucleosomes in the simulation, which is used to compute the LAMMPS parameter needed to maintain a constant temperature throughout binding iterations for input into `continue_sim.in`.
+> 12. `continue_sim.in` uses the updated probe states to continue the simulation. Bound probes remain fixed, while unbound probes continue to diffuse.
+13. `FinalWash.f90` performs the final distance check and removes all probes that remain unbound, producing the simulated post-wash labeled chromatin sample.
 
 The supplied BrdU scripts use an effective probe diameter of 1 reduced unit (10 nm), whereas the supplied EdU scripts use an effective diameter of 0.2 reduced units (2 nm). Throughout Layer 2, `1 reduced unit = 10 nm`.
 
@@ -342,34 +348,6 @@ Each `.mat` file must contain a one-dimensional `meanRD` array generated using t
 2. Yeo, W.-H., et al. Investigating uncertainties in single-molecule localization microscopy using experimentally informed Monte Carlo simulation. *Nano Letters* **23**, 7253–7259 (2023).
 3. Thompson, A. P., et al. LAMMPS—a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. *Computer Physics Communications* **271**, 108171 (2022).
 4. Brown, W. M., Petersen, M. K., Plimpton, S. J. & Grest, G. S. Liquid crystal nanodroplets in solution. *Journal of Chemical Physics* **130**, 044901 (2009).
-
-## Workflow
-
-The order of operations is the following:
-
-1. Go to the directory containing the SREV configuration (ideally should have 1 SREV configuration per folder).
-
-2. Copy over the fluorophore diffusivity simulation scripts to that directory.
-
-3. Load the LAMMPS Molecular Dynamics and MPI packages.
-
-4. Enter SREV configuration filenames into the fluorophore diffusivity scripts.
-
-5. Initialize the random positions of the dye labels within the simulation box containing the SREV configuration.
-
-5. Run a brief LAMMPS simulation to generate a version of the SREV configuration that lacks overlapping nucleosomes.
-
-6. Run a brief LAMMPS simulation to output the number of SREV nucleosomes that will be used in the simulation. This is vital for properly setting the temperature of the mobile objects at the desired level.
-
-7. Run the first iteration of the simulation. This simulation run will output a trajectory of all 10000 dye labels over the course of this simulation iteration.
-
-For *n* number of user-specified iterations, loop through Steps #8-10 below:
-
-> 8. Input the dye label trajectory file to perform the distance-based colocalization check + appropriate tagging of all dye labels and generate a new dye label input file containing those tags.
-> 9. Run a brief simulation to obtain output files that give the number of immobilized dye labels and stuck SREV nucleosomes in the simulation. This is important for recomputing the parameter needed to properly set the temperature of the mobile objects at the desired level.
-> 10. Run the next iteration of the simulation with the new dye label input file. This simulation run will output a trajectory of all 10000 dye labels over the course of this simulation iteration.
-
-11. Simulate a "wash" step of the simulated labeled chromatin sample by filtering out all dye labels that have not bound to an SREV nucleosome by that time. Output the coordinates of these dye labels still present in the model chromatin post-wash. This output is your post-wash labeled model chromatin sample. 
 
 
 ## BEFORE YOU BEGIN:
