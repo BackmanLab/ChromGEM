@@ -405,7 +405,7 @@ Each `.mat` file must contain a one-dimensional `meanRD` array generated using t
 3. Thompson, A. P., et al. LAMMPS—a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. *Computer Physics Communications* **271**, 108171 (2022).
 4. Brown, W. M., Petersen, M. K., Plimpton, S. J. & Grest, G. S. Liquid crystal nanodroplets in solution. *Journal of Chemical Physics* **130**, 044901 (2009).
 
-The simulations scripted here were performed using the LAMMPS Molecular Dynamics Simulator<sup>1</sup>. For more on LAMMPS, consult https://www.lammps.org . Interactions between the particles were modeled using LAMMPS' *pair gayberne* framework for modeling Gay-Berne interaction potentials between ellipsoidal particles<sup>2</sup>.
+The simulations scripted here were performed using the LAMMPS Molecular Dynamics Simulator<sup>3</sup>. For more on LAMMPS, consult https://www.lammps.org . Interactions between the particles were modeled using LAMMPS' *pair gayberne* framework for modeling Gay-Berne interaction potentials between ellipsoidal particles<sup>4</sup>.
 
 We acknowledge the contributions of Dr. Marcelo Carignano in determining the formula for obtaining the desired simulation temperature based on the number of mobile particles and immobilized particles.
 
