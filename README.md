@@ -296,7 +296,7 @@ Each `.mat` file must contain a one-dimensional `meanRD` array generated using t
 
 | Stage | Primary input | Primary output | Used by |
 |---|---|---|---|
-| Layer 1 | `alpha`, `phi`, SR-EV settings | 3D nucleosome configuration | Layer 2; 3D domain identification |
+| Layer 1 | $\alpha$, $\phi$, SR-EV settings | 3D nucleosome configuration | Layer 2; 3D domain identification |
 | Layer 2 | SR-EV nucleosomes; EdU/BrdU probe settings | Pre-wash and post-wash probe `.xyz` files; edited nucleosome configuration | Layer 3 |
 | Layer 3 | Post-wash probes; ground-truth nucleosomes | Simulated SMLM localization CSVs and ground-truth coordinate CSVs | SMLM-vs-ground-truth comparisons |
 | Coordinate-to-volume conversion | Nucleosome, probe, or localization coordinates | Gaussian-smoothed 3D TIFF volume | Volume-based downstream analysis |
