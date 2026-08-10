@@ -195,11 +195,6 @@ The equation that computes the temperature to input to produce the desired tempe
 
 As an example, the BrdU and EdU Execution Scripts used for the manuscript are provided (Layer_2/BrdU_Execution_Scripts and Layer_2/EdU_Execution_Scripts, respectively). The supplied BrdU scripts use an effective probe diameter of 1 reduced unit (10 nm), whereas the supplied EdU scripts use an effective diameter of 0.2 reduced units (2 nm). Throughout Layer 2, `1 reduced unit = 10 nm`. For convenience, the final outputs for Layer 2 with SREV config #3 are stored in the Layer_3_Monte_Carlo/Layer 3 input folder for easy input into Layer 3.
 
-
-The post-wash EdU and BrdU coordinate files, together with the edited SR-EV nucleosome configuration, are the principal inputs to Layer 3. The same ground-truth nucleosome and post-wash probe distributions can also be voxelized and analyzed through the parallel 3D domain-analysis branch. Layer 3 localizations are therefore the simulated SMLM endpoint; they are not required by the supplied 3D radial-density notebook.
-
-The post-wash EdU and BrdU coordinate files, together with the edited SR-EV nucleosome configuration, are the principal inputs to Layer 3. The same ground-truth nucleosome and post-wash probe distributions can also be voxelized and analyzed through the parallel 3D domain-analysis branch. Layer 3 localizations are therefore the simulated SMLM endpoint; they are not required by the supplied 3D radial-density notebook.
-
 ## Layer 3: Monte Carlo Simulation of Fluorophore Emissions
 
 Notebook: [`Layer_3_Monte_Carlo/Layer 3 Monte Carlo simulation_github.ipynb`](Layer_3_Monte_Carlo/Layer%203%20Monte%20Carlo%20simulation_github.ipynb)
@@ -248,6 +243,8 @@ particle_type  x  y  z
 - Diagnostic scatter plots comparing label distributions before and after the simulated wash.
 
 These CSV files provide paired ground-truth and simulated measurement datasets for downstream quantitative comparison.
+
+The post-wash EdU and BrdU coordinate files, together with the edited SR-EV nucleosome configuration, are the principal inputs to Layer 3. The same ground-truth nucleosome and post-wash probe distributions can also be voxelized and analyzed through the parallel 3D domain-analysis branch. Layer 3 localizations are therefore the simulated SMLM endpoint; they are not required by the supplied 3D radial-density notebook in Domain Radial Density Plot (Figure 3 d e)/.
 
 ## Coordinate-to-Volume Conversion for Downstream Analysis
 
