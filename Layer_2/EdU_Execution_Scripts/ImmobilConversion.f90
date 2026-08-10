@@ -1,5 +1,4 @@
 ! TITLE: ImmobilConversion.f90
-! AUTHOR: Rivaan Kakkaramadam
 ! DESCRIPTION: This script takes in the dye label trajectory file outputted by one of the LAMMPS sim files here 
 ! to perform a Euclidean distance-based colocalization check and appropriate tagging of all dye labels. 
 ! Output is a new dye label input file where particle type corresponds to the dye label tag (2 = uncolocalized, 3 = colocalized).
