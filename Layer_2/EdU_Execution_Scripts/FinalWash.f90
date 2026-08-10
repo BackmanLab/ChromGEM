@@ -1,5 +1,4 @@
 ! TITLE: FinalWash.f90
-! AUTHOR: Rivaan Kakkaramadam
 ! DESCRIPTION: This script takes in the dye label trajectory file outputted by the last iteration of the diffusivity simulation
 ! to perform a Euclidean distance-based colocalization check and appropriate tagging of all dye labels. The "wash" step of this model
 ! chromatin sample is simulated by producing a list of dye labels that filters out the dye labels that had not bound to the model chromatin
