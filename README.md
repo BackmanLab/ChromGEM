@@ -191,7 +191,7 @@ Directory: [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/)
 
 ### What the domain identification script does
 
-This domain identification workflow takes after the domain identification workflow in 2D [chromatin scanning transmission electron microscopy (ChromSTEM)](https://www.nature.com/articles/s41598-022-16028-2 , https://www.science.org/doi/10.1126/sciadv.adp0855) data. The domain identification workflow locates the centers of local chromatin packing domains in the ground-truth SR-EV configuration:
+This domain identification workflow takes after the domain identification workflow in 2D chromatin scanning transmission electron microscopy (ChromSTEM) data ([Li et al., *Scientific Reports* 2022](https://www.nature.com/articles/s41598-022-16028-2) [W.S.Li, Carter, Almassalha et al., *Science Advances* 2025](https://www.science.org/doi/10.1126/sciadv.adp0855)). The domain identification workflow locates the centers of local chromatin packing domains in the ground-truth SR-EV configuration:
 
 1. Converts the 3D nucleosome coordinates into a voxelized chromatin-density volume.
 2. Applies a `3 x 3 x 3` maximum filter to identify candidate local maxima. A voxel is retained as a candidate when its intensity equals the maximum intensity in its local neighborhood.
