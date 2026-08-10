@@ -1,5 +1,4 @@
 # Program: continue_sim.in
-# Author: Rivaan Kakkaramadam
 # Description: This script will run an intermediate iteration of a diffusivity simulation of 10000 spheres with a representative size 
 # of the fluorophores used in EdU-based DNA labeling in 1 SREV-generated model chromatin distribution. 
 # This simulation run will output a trajectory of all 10000 dye labels over the course of this simulation iteration.
