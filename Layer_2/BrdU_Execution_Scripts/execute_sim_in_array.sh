@@ -18,6 +18,10 @@ cd $dirname
 
 cp /projects/p31375/SMLM-SREV-main/BrdU_Execution_Scripts/* .
 
+# EXCHANGE BELOW SIZE FOR YOUR SIZE OF CHOICE FOR LABEL SIMULATIONS (size should be in nm)
+
+size=10
+
 # DEFINE LOCATIONS OF LAMMPS (MPI version) AND MPIRUN PROGRAMS FOR EXECUTION
 
 lammps="/home/rivaankakkaramadam/lammps-03032020/src/lmp_mpi"
@@ -33,29 +37,42 @@ rm log*
 rm dump*
 rm wc.txt
 
-# automatically trade out config-specific filenames in scripts
+# automatically trade out config-specific filenames in scripts and exchange label size for user-selected size
+
+sizeinru=$(echo "scale=2; $size/10" | bc)
 
 lammpsdump="config-relaxed-${SLURM_ARRAY_TASK_ID}.dump"
 editedlammpsdump="edited-config-${SLURM_ARRAY_TASK_ID}.dump"
-outputwashfile="BrdU-postwash-config-${SLURM_ARRAY_TASK_ID}.xyz"
+outputwashfile="Label-postwash-config-${SLURM_ARRAY_TASK_ID}.xyz"
 
 sed -i "s:^read_dump .*:read_dump ${lammpsdump} 0 x y z add yes box yes:" getconfig_nooverlaps.in
 sed -i "s:^dump 1 ellip custom 100 edited-config.*:dump 1 ellip custom 100 ${editedlammpsdump} id type x y z c_0[*]:" getconfig_nooverlaps.in
+sed -i "s:^set type 2 shape .*:set type 2 shape ${sizeinru} ${sizeinru} ${sizeinru}:" getconfig_nooverlaps.in
 
 sed -i "s:^  configfilename = .*:  configfilename = '${lammpsdump}':" InitWalkers.f90
+sed -i "s:^  sigmawalkerwalker = .*:  sigmawalkerwalker = ${sizeinru}:" InitWalkers.f90
 sed -i "s/\r//g" InitWalkers.f90
 gfortran -Ofast InitWalkers.f90 -o InitWalkers
 ./InitWalkers
 
 sed -i "s:^  configfilename = .*:  configfilename = '${editedlammpsdump}':" ImmobilConversion.f90
+sed -i "s:^  protradius = .*:  protradius = ${sizeinru}/2.0d0:" ImmobilConversion.f90
 sed -i "s/\r//g" ImmobilConversion.f90
 
 sed -i "s:^read_dump .*:read_dump ${lammpsdump} 0 x y z add yes box yes:" overlapfilter.in
+sed -i "s:^set type 2 shape .*:set type 2 shape ${sizeinru} ${sizeinru} ${sizeinru}:" overlapfilter.in
+sed -i "s:^set type 2 shape .*:set type 2 shape ${sizeinru} ${sizeinru} ${sizeinru} # define mobile fluorophore ellipsoid (sphere) dimensions:" overlapfilter_continue.in
+sed -i "s:^set type 3 shape .*:set type 3 shape ${sizeinru} ${sizeinru} ${sizeinru} # define colocalized fluorophore ellipsoid (sphere) dimensions:" overlapfilter_continue.in
 sed -i "s:^read_dump .*:read_dump ${lammpsdump} 0 x y z add yes box yes:" first_sim.in
+sed -i "s:^set type 2 shape .*:set type 2 shape ${sizeinru} ${sizeinru} ${sizeinru}:" first_sim.in
 sed -i "s:^read_dump .*:read_dump ${lammpsdump} 0 x y z add yes box yes:" continue_sim.in
+sed -i "s:^set type 2 shape .*:set type 2 shape ${sizeinru} ${sizeinru} ${sizeinru} # define mobile fluorophore ellipsoid (sphere) dimensions:" continue_sim.in
+sed -i "s:^set type 3 shape .*:set type 3 shape ${sizeinru} ${sizeinru} ${sizeinru} # define colocalized fluorophore ellipsoid (sphere) dimensions:" continue_sim.in
 
 sed -i "s:^  configfilename = .*:  configfilename = '${editedlammpsdump}':" FinalWash.f90
 sed -i "s:^open(unit = 9, file =.*:open(unit = 9, file = '${outputwashfile}'):" FinalWash.f90
+sed -i "s:^  protradius = .*:  protradius = ${sizeinru}/2.0d0:" FinalWash.f90
+sed -i "s/\r//g" FinalWash.f90
 
 # get version of SREV configs that lack all overlapping nucleosomes
 
