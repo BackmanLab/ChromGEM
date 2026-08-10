@@ -326,20 +326,6 @@ Each `.mat` file must contain a one-dimensional `meanRD` array generated using t
 | 3D domain analysis | Density volume; domain centers | Per-domain TIFF plots and `DomainNN.mat` files | Figure 3d–e plotting |
 | Radial-density plotting | Matched EdU, BrdU, and nucleosome `DomainNN.mat` files | Normalized radial-density and derivative figures | Figure 3d–e |
 
-## Python Dependencies
-
-The notebooks require the following key Python packages:
-
-```text
-numpy 1.26.4
-pandas 2.1.4
-matplotlib 3.8.0
-scipy 1.11.4
-tifffile 2023.4.12
-```
-
-Not every imported package is used by every notebook. A dedicated environment file is recommended for long-term reproducibility.
-
 ## Reproducibility Notes
 
 - Replace the blank or Windows-style input/output paths in the notebooks before execution.
