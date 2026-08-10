@@ -306,14 +306,14 @@ Each `.mat` file must contain a one-dimensional `meanRD` array generated using t
 
 ## Python Dependencies
 
-The notebooks import the following key Python packages:
+The notebooks require the following key Python packages:
 
 ```text
-numpy
-pandas
-matplotlib
-scipy
-tifffile
+numpy 1.26.4
+pandas 2.1.4
+matplotlib 3.8.0
+scipy 1.11.4
+tifffile 2023.4.12
 ```
 
 Not every imported package is used by every notebook. A dedicated environment file is recommended for long-term reproducibility.
