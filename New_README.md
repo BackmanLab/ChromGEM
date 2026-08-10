@@ -48,7 +48,7 @@ Radial-density plots
 ### Hardware Requirements
 
 * It is recommended to allocate at least 30GB and 16 processors to each simulation. Each simulation will take up to 48 hours to run. ChromGEM can be run in serial (simulated SMLM in one chromatin configuration at a time) or in parallel (simulated SMLM in multiple chromatin configurations at once).
-* The [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/) script in particular will take 5+ hours to run for workstation with 32GB of RAM.
+* The [`Domain Identification in 3D/3D Domain Identification_github.ipynb`](Domain%20Identification%20in%203D/) script in particular will take 5+ hours to run for workstation with 32GB of RAM.
 
 ### Python Dependencies
 
@@ -63,8 +63,6 @@ tifffile 2023.4.12
 ```
 
 Not every imported package is used by every script. A dedicated environment file is recommended for long-term reproducibility.
-
-
 
 ## Layer 1: SR-EV Model Chromatin Generation
 
