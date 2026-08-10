@@ -1,5 +1,4 @@
 # Program: overlapfilter.in
-# Author: Rivaan Kakkaramadam
 # Description: The purpose of this simulation is to generate the number of SREV nucleosomes after LAMMPS' overlapping filter process. This number is
 # important in calculating the input parameters needed to simulate the diffusion of the mobile objects at a consistent temperature.
 
