@@ -114,8 +114,8 @@ For each SR-EV configuration, Layer 2 performs the following operations:
 8. `first_sim.in` performs the first LAMMPS diffusion interval and writes the probe trajectory to `walkers.xyz`.
 9. For *n* number of user-specified iterations, loop through Steps #10-12 below:
 > 10. `ImmobilConversion.f90` reads the final saved frame, calculates the probe-to-nucleosome distance, and based on this distance assigns each probe a state:
-   - type 2: mobile/unbound;
-   - type 3: nucleosome-colocalized/immobilized.
+>   - type 2: mobile/unbound;
+>   - type 3: nucleosome-colocalized/immobilized.
 > 11. `overlapfilter_continue.in` outputs the number of immobilized dye labels and stuck SREV nucleosomes in the simulation, which is used to compute the LAMMPS parameter needed to maintain a constant temperature throughout binding iterations for input into `continue_sim.in`.
 > 12. `continue_sim.in` uses the updated probe states to continue the simulation. Bound probes remain fixed, while unbound probes continue to diffuse.
 13. `FinalWash.f90` performs the final distance check and removes all probes that remain unbound, producing the simulated post-wash labeled chromatin sample.
