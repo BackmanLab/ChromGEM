@@ -408,6 +408,6 @@ The simulations scripted here were performed using the LAMMPS Molecular Dynamics
 
 We acknowledge the contributions of Dr. Marcelo Carignano in determining the formula for obtaining the desired simulation temperature based on the number of mobile particles and immobilized particles.
 
-**Declaration of Generative AI and AI-Assisted Technologies in this Code Documentation**
-During the preparation of this README, the author(s) used ChatGPT 5.6 in order to ensure readability. After using this tool/service, the author(s) reviewed and edited the content as needed and took full responsibility for the content of the publication.
+**Declaration of Generative AI and AI-Assisted Technologies in this Documentation**
+During the preparation of this document, the author(s) used ChatGPT 5.6 in order to ensure readability. After using this tool/service, the author(s) reviewed and edited the content as needed and took full responsibility for the content of the publication.
 
