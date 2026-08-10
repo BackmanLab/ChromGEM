@@ -1,5 +1,4 @@
 # ChromGEM
-By Ruyi Gong and Rivaan Kakkaramadam
 
 ## Overview
 
