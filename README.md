@@ -58,15 +58,15 @@ Critically, these return rules can be modulated via $\alpha$, an input parameter
 
 ### Output
 
-- A three-dimensional SR-EV nucleosome configuration, normally stored as a LAMMPS-style dump file containing particle coordinates, .
+- A three-dimensional SR-EV nucleosome configuration, normally stored as a LAMMPS-style dump file containing particle coordinates, unique particle identifiers, and particle types (all set to 1 to indicate they are nucleosomes).
 - These nucleosome coordinates are used as:
-  - the fixed chromatin obstacle and binding target in Layer 2;
+  - the model chromatin substrate for labeling in Layer 2;
   - the ground-truth nucleosome coordinates in Layer 3; and
   - the source data for 3D packing domain identification and analysis.
 
 ## Layer 2: Molecular-Dynamics Simulation of the Label Probe
 
-Layer 2 is contained in [`Layer_2/`](Layer_2/) and includes the execution scripts for EdU and BrdU labeling used in the study. The simulations use LAMMPS to model 10,000 fluorescent label probes diffusing around a fixed SR-EV nucleosome configuration.
+Layer 2 is contained in [`Layer_2/`](Layer_2/) and includes the execution scripts for EdU and BrdU labeling used in the study. The simulations use LAMMPS to model 10,000 fluorescent label probes diffusing about a fixed SR-EV nucleosome configuration.
 
 ### Required software
 
@@ -127,7 +127,7 @@ The Layer 3 notebook converts the physical probe locations produced by Layer 2 i
 
 1. Reads the pre-wash and post-wash EdU and BrdU coordinates and the edited ground-truth nucleosome coordinates from `.xyz` files.
 2. Converts the Layer 2 coordinates from reduced units to nanometers by multiplying each coordinate by 10.
-3. Selects probes and nucleosomes within a user-defined 3D region and optionally randomly subsamples them for visualization or computation.
+3. Selects probes and nucleosomes within a user-defined 3D region and optionally randomly subsamples them for visualization or computation. 
 4. Applies an experimentally informed Monte Carlo model to every selected post-wash probe:
    - the number of localization events per fluorophore is sampled from a negative-binomial distribution;
    - the radial localization error is sampled from a log-normal distribution;
@@ -144,7 +144,8 @@ The example files are stored in `Layer_3_Monte_Carlo/Layer 3 input/`:
 - `EdU-2nm-washed.xyz`: chromatin-bound EdU probe coordinates after the simulated wash.
 - `BrdU-10nm.xyz`: BrdU probe coordinates before the simulated wash.
 - `BrdU-10nm-washed.xyz`: chromatin-bound BrdU probe coordinates after the simulated wash.
-- `edited-config-3.xyz`: edited ground-truth SR-EV nucleosome coordinates.
+- `edited-config-3.xyz`: "edited" ground-truth SR-EV nucleosome coordinates.
+  - This "edited" file is generated in Layer 2; before performing the label diffusivity simulations, the original SREV-generated model chromatin configurations pass through an initial filter In Layer 2 that screens out any nucleosome positions overlapping in a manner unrealistic of the excluded volume occupied by nucleosomes. This step is vital to prevent simulation crashes. These screened nucleosome positions were 0-25 out of the outputted 530000+. Label diffusivity simulations are then performed on those "edited" files.
 
 User-defined notebook parameters include the input and output directories, the `x`, `y`, and `z` bounds of the analyzed region, the sampling factor, and the negative-binomial and log-normal distribution parameters used by the Monte Carlo model.
 
@@ -188,9 +189,9 @@ Equivalent TIFF volumes can be generated from the EdU, BrdU, or simulated-locali
 
 Directory: [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/)
 
-### What the domain-identification script does
+### What the domain identification script does
 
-The domain-identification workflow locates the centers of local chromatin packing domains in the ground-truth SR-EV configuration:
+This domain identification workflow takes after the domain identification workflow in 2D [chromatin scanning transmission electron microscopy (ChromSTEM)](https://www.nature.com/articles/s41598-022-16028-2 , https://www.science.org/doi/10.1126/sciadv.adp0855) data. The domain identification workflow locates the centers of local chromatin packing domains in the ground-truth SR-EV configuration:
 
 1. Converts the 3D nucleosome coordinates into a voxelized chromatin-density volume.
 2. Applies a `3 x 3 x 3` maximum filter to identify candidate local maxima. A voxel is retained as a candidate when its intensity equals the maximum intensity in its local neighborhood.
