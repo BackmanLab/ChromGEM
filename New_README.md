@@ -77,7 +77,7 @@ Download the zipped file and unzip in your working directory. This will take <5 
 
 ## Layer 1: SR-EV Model Chromatin Generation
 
-In the SR-EV algorithm, a Self-Returning Random Walk ([SRRW](https://www.science.org/doi/10.1126/sciadv.aay4055)) is performed to generate a list of nucleosome locations in space followed by a short molecular dynamics simulation to account for excluded volume occupied by each nucleosome. The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which tunes clustering patterns in the SRRW, and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions because they were previously demonstrated to generate chromatin configurations that align with ChromSTEM observations of domain distributions in HCT116. The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
+In the SR-EV algorithm, a Self-Returning Random Walk ([SRRW](https://www.science.org/doi/10.1126/sciadv.aay4055)) is performed to generate a list of nucleosome locations in space followed by a short molecular dynamics simulation to account for excluded volume occupied by each nucleosome. The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which tunes clustering patterns in the SRRW, and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
 
 ### What this layer does
 
@@ -104,9 +104,9 @@ Critically, these return rules can be modulated via $\alpha$, an input parameter
   - the ground-truth nucleosome coordinates in Layer 3; and
   - the source data for 3D packing domain identification and analysis.
  
-#### BrdU and EdU Case Study
+#### BrdU and EdU in HCT116 Case Study
 
-The outputted SREV configurations used in the manuscript are given in Layer 2/Inputs for use in the BrdU and EdU example study. 
+In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions because they were previously demonstrated to generate chromatin configurations that align with ChromSTEM observations of domain distributions in HCT116. The SREV configurations outputted from these parameters were also what was used in the manuscript. These are given in Layer 2/Inputs for use in the BrdU and EdU example study. 
 
 ## Layer 2: Molecular-Dynamics Simulation of the Label Probe
 
