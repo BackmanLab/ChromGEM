@@ -66,6 +66,11 @@ tifffile 2023.4.12
 
 Not every imported package is used by every script. A dedicated environment file is recommended for long-term reproducibility.
 
+### Versions Tested
+
+* Layers 1 and 2 have been tested on Linus-RHEl7-x86_64.
+* Layer 3 has been tested on [RUYI]
+
 ## Installation Guide
 
 Download the zipped file and unzip in your working directory. This will take <5 min. on a typical desktop.
