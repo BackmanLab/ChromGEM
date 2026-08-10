@@ -68,8 +68,8 @@ Not every imported package is used by every script. A dedicated environment file
 
 ### Versions Tested
 
-* Layers 1 and 2 have been tested on Linus-RHEl7-x86_64.
-* Layer 3 has been tested on [RUYI]
+* Layers 1 and 2 have successfully run on Linux-RHEl7-x86_64.
+* Layer 3 has successfully run on Windows 11.
 
 ## Installation Guide
 
@@ -401,7 +401,7 @@ Each `.mat` file must contain a one-dimensional `meanRD` array generated using t
 
 ## References and Acknowledgements
 
-1. Carignano, M. A., Kroeger, B., et al. Chromatin packing domains in HCT-116 cells are structurally heterogeneous and suppress transcription. *eLife* (2024). [https://elifesciences.org/articles/97604](https://elifesciences.org/articles/97604)
+1. Carignano, M. A., Kroeger, B., et al. Local Volume Concentration, Packing Domains and Scaling Properties of Chromatin. *eLife* (2024). [https://elifesciences.org/articles/97604](https://elifesciences.org/articles/97604)
 2. Yeo, W.-H., et al. Investigating uncertainties in single-molecule localization microscopy using experimentally informed Monte Carlo simulation. *Nano Letters* **23**, 7253–7259 (2023).
 3. Thompson, A. P., et al. LAMMPS—a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. *Computer Physics Communications* **271**, 108171 (2022).
 4. Brown, W. M., Petersen, M. K., Plimpton, S. J. & Grest, G. S. Liquid crystal nanodroplets in solution. *Journal of Chemical Physics* **130**, 044901 (2009).
