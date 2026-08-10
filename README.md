@@ -81,7 +81,7 @@ For each SR-EV configuration, Layer 2 performs the following operations:
 
 1. `InitWalkers.f90` randomly initializes 10,000 probe positions inside the simulation box while rejecting positions that overlap nucleosomes or previously placed probes.
 2. `getconfig_nooverlaps.in` prepares the nucleosome configuration and remove rare unrealistic nucleosome overlaps before probe diffusion is simulated.
-3. `overlapfilter*.in` generate information necessary to maintain a constant temperature throughout binding iterations.
+3. `overlapfilter*.in` generate information necessary to maintain a constant temperature throughout binding iterations for input into `first_sim.in` and `continue_sim.in`.
 4. `first_sim.in` performs the first LAMMPS diffusion interval and writes the probe trajectory to `walkers.xyz`.
 5. `ImmobilConversion.f90` reads the final saved frame, calculates the probe-to-nucleosome distance, and based on this distance assigns each probe a state:
    - type 2: mobile/unbound;
