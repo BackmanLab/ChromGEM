@@ -35,6 +35,37 @@ Voxel-based 3D TIFF volumes
 Radial-density plots
 ```
 
+## System Requirements
+
+### Software Requirements
+
+1. [LAMMPS](https://www.lammps.org/) (the study used the March 3, 2020 version), built with the ASPHERE, MPI, MPIIO, OpenCL, and OpenMP packages.
+2. [Open MPI](https://www.open-mpi.org/software/ompi/v4.1/) version 4.1.4.
+3. A [Fortran 90 compiler](https://fortran-lang.org/learn/os_setup/), such as `gfortran`.
+4. *Not required but highly recommended*: A SLURM-compatible computing cluster for the supplied batch-execution script.
+5. *Not required but highly recommended*: [Anaconda](https://www.anaconda.com/download) to install Python, Jupyter Notebook, and required Python dependencies easily.
+
+### Hardware Requirements
+
+* It is recommended to allocate at least 30GB and 16 processors to each simulation. Each simulation will take up to 48 hours to run. ChromGEM can be run in serial (simulated SMLM in one chromatin configuration at a time) or in parallel (simulated SMLM in multiple chromatin configurations at once).
+* The [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/) script in particular will take 5+ hours to run for workstation with 32GB of RAM.
+
+### Python Dependencies
+
+The notebooks require the following key Python packages:
+
+```text
+numpy 1.26.4
+pandas 2.1.4
+matplotlib 3.8.0
+scipy 1.11.4
+tifffile 2023.4.12
+```
+
+Not every imported package is used by every script. A dedicated environment file is recommended for long-term reproducibility.
+
+
+
 ## Layer 1: SR-EV Model Chromatin Generation
 
 In the SR-EV algorithm, a Self-Returning Random Walk ([SRRW](https://www.science.org/doi/10.1126/sciadv.aay4055)) is performed to generate a list of nucleosome locations in space followed by a short molecular dynamics simulation to account for excluded volume occupied by each nucleosome. The computational procedure for the Self-Returning, Excluded Volume (SR-EV) polymer model generation was obtained from published work ([Carignano, Kroeger, et al., *eLife*, 2024](https://elifesciences.org/articles/97604)). Two user-selected parameters are input into SR-EV: alpha ($\alpha$), which tunes clustering patterns in the SRRW, and phi ($\phi$), which controls the chromatin volume fraction in the simulation box (and subsequently the number of outputted nucleosomes). In this study, input parameters of $\alpha$ = 1.15 and $\phi$ = 0.12 were used to generate model HCT116 chromatin distributions because they were previously demonstrated to generate chromatin configurations that align with ChromSTEM observations of domain distributions in HCT116. The SR-EV generation code is not included in this repository and are available upon request from the co-first authors of the cited publication.
@@ -54,7 +85,7 @@ Critically, these return rules can be modulated via $\alpha$, an input parameter
 ### Input
 
 - SR-EV model parameters $\alpha$ and $\phi$.
-- If needed, other minor SR-EV generation settings defined in the source implementation, namely the simulation box dimensions. This would likely need to be tweaked for SREV configurations with $\phi$ > 0.12 to avoid overcrowding in the box before the SREV algorithm approaches the desired $\phi$.
+- If needed, other minor SR-EV generation settings defined in the source implementation, namely the simulation box dimensions. This would likely need to be tweaked for SREV configurations with $\phi$ > 0.12 to avoid overcrowding in the box before the SR-EV algorithm approaches the desired $\phi$.
 
 ### Output
 
@@ -67,13 +98,6 @@ Critically, these return rules can be modulated via $\alpha$, an input parameter
 ## Layer 2: Molecular-Dynamics Simulation of the Label Probe
 
 Layer 2 is contained in [`Layer_2/`](Layer_2/) and includes the execution scripts for EdU and BrdU labeling used in the study. The simulations use LAMMPS to model 10,000 fluorescent label probes diffusing about a fixed SR-EV nucleosome configuration.
-
-### Required software
-
-1. [LAMMPS](https://www.lammps.org/) (the study used the March 3, 2020 version), built with the ASPHERE, MPI, MPIIO, OpenCL, and OpenMP packages.
-2. [Open MPI](https://www.open-mpi.org/software/ompi/v4.1/) version 4.1.4.
-3. A [Fortran 90 compiler](https://fortran-lang.org/learn/os_setup/), such as `gfortran`.
-4. *Not required but highly recommended*: A SLURM-compatible computing cluster for the supplied batch-execution script.
 
 ### What this layer does
 
@@ -164,7 +188,7 @@ particle_type  x  y  z
 - `df_fluor_nucleosome.csv`: selected ground-truth nucleosome positions in the imaging plane.
 - Diagnostic scatter plots comparing label distributions before and after the simulated wash.
 
-These CSV files provide paired ground-truth and simulated-measurement datasets for downstream quantitative comparison.
+These CSV files provide paired ground-truth and simulated measurement datasets for downstream quantitative comparison.
 
 ## Coordinate-to-Volume Conversion for Downstream Analysis
 
@@ -183,7 +207,7 @@ Nucleosome_Gaussian_rad5.tif
 
 This TIFF represents the spatially smoothed 3D nucleosome-density distribution and is the primary input for both 3D domain identification and the subsequent 3D domain-property analysis. Gaussian smoothing reduces voxel-scale fluctuations introduced by coordinate discretization and creates a continuous local-density field from which packing-domain centers and radial-density profiles can be calculated.
 
-Equivalent TIFF volumes can be generated from the EdU, BrdU, or simulated-localization coordinates when those distributions are analyzed using the same volume-based workflow. For matched comparisons, all coordinate datasets must use the same grid dimensions, voxel size, coordinate origin, and Gaussian-filter parameters.
+Equivalent TIFF volumes can be generated from the EdU, BrdU, or simulated localization coordinates when those distributions are analyzed using the same volume-based workflow. For matched comparisons, all coordinate datasets must use the same grid dimensions, voxel size, coordinate origin, and Gaussian-filter parameters.
 
 ## Downstream Analysis 1: Domain Identification in 3D
 
@@ -213,7 +237,7 @@ This domain identification workflow takes after the domain identification workfl
 - The example downstream filename is `Nucleosome_maxima (domain center)_github.npy`.
 - Optional intermediate products may include the voxelized nucleosome volume, candidate-maxima mask, and accepted-center visualization.
 
-The detected center coordinates are used by the 3D domain-analysis notebook to center and extract one cubic region of interest for each domain.
+The detected center coordinates are used by the 3D domain analysis notebook to center and extract one cubic region of interest for each domain.
 
 ## Downstream Analysis 2: Domain Analysis in 3D
 
@@ -334,13 +358,6 @@ Not every imported package is used by every notebook. A dedicated environment fi
 2. Yeo, W.-H., et al. Investigating uncertainties in single-molecule localization microscopy using experimentally informed Monte Carlo simulation. *Nano Letters* **23**, 7253–7259 (2023).
 3. Thompson, A. P., et al. LAMMPS—a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. *Computer Physics Communications* **271**, 108171 (2022).
 4. Brown, W. M., Petersen, M. K., Plimpton, S. J. & Grest, G. S. Liquid crystal nanodroplets in solution. *Journal of Chemical Physics* **130**, 044901 (2009).
-
-## System Requirements
-
-### Hardware Requirements
-
-* It is recommended to allocate at least 30GB and 16 processors to each simulation. Each simulation will take up to 48 hours to run. ChromGEM can be run in serial (simulated SMLM in one chromatin configuration at a time) or in parallel (simulated SMLM in multiple chromatin configurations at once).
-* The [`Domain Identification in 3D/`](Domain%20Identification%20in%203D/) script in particular will take 5+ hours to run for workstation with 32GB of RAM.
 
 ## Workflow
 
