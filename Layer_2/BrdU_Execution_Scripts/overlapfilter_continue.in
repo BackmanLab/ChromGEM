@@ -1,5 +1,4 @@
 # Program: overlapfilter_continue.in
-# Author: Rivaan Kakkaramadam
 # Description: The purpose of this simulation is to generate the number of immobilized objects (SREV nucleosomes + colocalized labels) 
 # after LAMMPS' overlapping filter process & iteration of dye diffusivity simulation. This number is critical in calculating
 # the input parameters needed to simulate the diffusion of mobile labels at a consistent temperature between iterations.
