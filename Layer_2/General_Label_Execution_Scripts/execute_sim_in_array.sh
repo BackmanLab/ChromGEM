@@ -24,7 +24,7 @@ size=10
 
 # DEFINE LOCATIONS OF LAMMPS (MPI version) AND MPIRUN PROGRAMS FOR EXECUTION
 
-lammps="/home/rivaankakkaramadam/lammps-03032020/src/lmp_mpi"
+lammps="/home/YourName/lammps-03032020/src/lmp_mpi"
 mpirunexec="/opt/openmpi/4.1.4/bin/mpirun"
 
 # safeguard preventing combination of data from multiple simulations in case you need to rerun anything
